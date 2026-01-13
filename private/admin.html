@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel Administrativo</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div class="container admin-page">
+    <div class="logo-container">
+      <img src="/logo-trindade.png" alt="Logo Paróquia Santíssima Trindade" class="logo">
+    </div>
+    <div class="cabecalho">Paróquia Santíssima Trindade</div>
+    <h1>Painel Administrativo</h1>
+
+    <div class="dashboard-container">
+      <div class="chart-card">
+        <h3>Inscrições Recentes</h3>
+        <canvas id="chart-daily"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Inscrições do Mês</h3>
+        <canvas id="chart-monthly"></canvas>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="filtro" placeholder="Buscar por nome (batizando, pais, padrinhos)">
+      <button id="btn-filtros">Filtros Avançados</button>
+      <button id="btn-exportar">CSV</button>
+      <button id="btn-pdf">PDF</button>
+      <div class="contador" id="contador">0 inscrições</div>
+    </div>
+    
+    <div id="area-filtros" class="area-filtros" style="display:none;">
+      <div class="filtro-grupo">
+        <label>Data Inscrição:</label>
+        <input type="date" id="filtro-data-inscricao">
+      </div>
+      <div class="filtro-grupo">
+        <label>Data Reunião:</label>
+        <input type="date" id="filtro-data-reuniao">
+      </div>
+      <div class="filtro-grupo">
+        <label>Período (Inscrição):</label>
+        <input type="date" id="filtro-inicio" title="Início"> a <input type="date" id="filtro-fim" title="Fim">
+      </div>
+      <div class="filtro-grupo">
+        <label>Sequência (ID):</label>
+        <input type="number" id="filtro-seq-ini" placeholder="De" style="width:60px"> a <input type="number" id="filtro-seq-fim" placeholder="Até" style="width:60px">
+      </div>
+      <div class="filtro-grupo">
+        <label>Status Presença:</label>
+        <select id="filtro-presenca">
+          <option value="todos">Todos</option>
+          <option value="completos">Com Presença Confirmada</option>
+          <option value="pendentes">Alguma Falta</option>
+        </select>
+      </div>
+      <button id="btn-limpar-filtros">Limpar Filtros</button>
+    </div>
+
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Data Inscr.</th>
+          <th>Data Reunião</th>
+          <th>Batizando</th>
+          <th>Pai</th>
+          <th>Celular Pai</th>
+          <th>Mãe</th>
+          <th>Celular Mãe</th>
+          <th>Padrinho</th>
+          <th>Madrinha</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="inscricoes-body"></tbody>
+    </table>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/admin.js"></script>
+</body>
+<html>

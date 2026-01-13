@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: batismo-app
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.21.0

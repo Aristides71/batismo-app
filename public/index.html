@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inscrição de Batismo</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+  <body>
+  <div class="container form-page">
+    <div class="logo-container">
+      <img src="/logo-trindade.png" alt="Logo Paróquia Santíssima Trindade" class="logo">
+    </div>
+    <div class="cabecalho">Paróquia Santíssima Trindade</div>
+    <h1>Formulário de Inscrição</h1>
+    <form id="inscricao-form">
+      <fieldset>
+        <legend>Batizando</legend>
+        <label>Nome
+          <input type="text" id="batizandoNome" required>
+        </label>
+      </fieldset>
+      <fieldset>
+        <legend>Pai</legend>
+        <label>Nome
+          <input type="text" id="paiNome" required>
+        </label>
+        <label>Celular
+          <input type="tel" id="paiCelular" placeholder="(xx) xxxxx-xxxx">
+        </label>
+      </fieldset>
+      <fieldset>
+        <legend>Mãe</legend>
+        <label>Nome
+          <input type="text" id="maeNome" required>
+        </label>
+        <label>Celular
+          <input type="tel" id="maeCelular" placeholder="(xx) xxxxx-xxxx">
+        </label>
+      </fieldset>
+      <fieldset>
+        <legend>Padrinho</legend>
+        <label>Nome
+          <input type="text" id="padrinhoNome" required>
+        </label>
+      </fieldset>
+      <fieldset>
+        <legend>Madrinha</legend>
+        <label>Nome
+          <input type="text" id="madrinhaNome" required>
+        </label>
+      </fieldset>
+      <fieldset>
+        <legend>Reunião</legend>
+        <label>Data da Reunião de Preparação
+          <input type="date" id="dataReuniao">
+        </label>
+      </fieldset>
+      <button type="submit">Enviar inscrição</button>
+      <p id="status" class="status"></p>
+    </form>
+  </div>
+  <script src="/client.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</body>
+<html>
