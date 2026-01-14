@@ -1,12 +1,18 @@
+require('dotenv').config()
 const express = require('express')
 const http = require('http')
 const path = require('path')
 const { Server } = require('socket.io')
 const session = require('express-session')
+const { createClient } = require('@supabase/supabase-js')
 
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server)
+
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 app.use(express.json())
 app.use(session({
@@ -16,7 +22,6 @@ app.use(session({
   cookie: { maxAge: 3600000 } // 1 hora
 }))
 
-// Auth Middleware
 const requireAuth = (req, res, next) => {
   if (req.session && req.session.authenticated) {
     return next()
@@ -24,17 +29,34 @@ const requireAuth = (req, res, next) => {
   res.redirect('/login.html')
 }
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, senha } = req.body
-  // Validação simples de email e senha
-  // Email deve conter @ e senha deve ser 'trindade'
   const emailValido = email && email.includes('@') && email.toLowerCase().includes('admin')
-  
-  if (emailValido && senha === 'trindade') {
+  if (!(emailValido && senha === 'trindade')) {
+    return res.status(401).json({ ok: false, error: 'Credenciais inválidas' })
+  }
+  try {
+    const { data, error } = await supabase.from('admin_emails').select('email')
+    if (error) {
+      console.error('Erro ao verificar admins', error)
+      req.session.authenticated = true
+      return res.json({ ok: true })
+    }
+    const lista = Array.isArray(data) ? data : []
+    if (lista.length === 0) {
+      req.session.authenticated = true
+      return res.json({ ok: true })
+    }
+    const autorizado = lista.some(a => String(a.email).toLowerCase() === String(email).toLowerCase())
+    if (!autorizado) {
+      return res.status(403).json({ ok: false, error: 'Usuário não autorizado' })
+    }
     req.session.authenticated = true
     return res.json({ ok: true })
+  } catch (e) {
+    console.error('Erro inesperado no login', e)
+    return res.status(500).json({ ok: false, error: 'Erro no servidor' })
   }
-  res.status(401).json({ ok: false, error: 'Credenciais inválidas' })
 })
 
 app.get('/logout', (req, res) => {
@@ -53,14 +75,38 @@ app.get('/admin', requireAuth, (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')))
 
-const inscricoes = []
-let seq = 1
-
-io.on('connection', socket => {
-  socket.emit('lista_inscricoes', inscricoes)
+// Helpers de Conversão
+const dbToFrontend = (row) => ({
+  id: row.id, // UUID string
+  criadoEm: row.created_at,
+  dataReuniao: row.meeting_date,
+  batizando: { nome: row.baptized_name },
+  pai: { nome: row.father_name, celular: row.contact_phone, presente: row.confirmed_father },
+  mae: { nome: row.mother_name, celular: row.contact_phone, presente: row.confirmed_mother },
+  padrinho: { nome: row.godfather_name, celular: '', presente: row.confirmed_godfather },
+  madrinha: { nome: row.godmother_name, celular: '', presente: row.confirmed_godmother }
 })
 
-app.post('/api/inscricoes', (req, res) => {
+// Função para carregar e emitir inscrições
+const carregarInscricoes = async () => {
+  const { data, error } = await supabase
+    .from('registrations')
+    .select('*')
+    .order('created_at', { ascending: false })
+  
+  if (error) {
+    console.error('Erro ao carregar:', error)
+    return []
+  }
+  return data.map(dbToFrontend)
+}
+
+io.on('connection', async socket => {
+  const lista = await carregarInscricoes()
+  socket.emit('lista_inscricoes', lista)
+})
+
+app.post('/api/inscricoes', async (req, res) => {
   const {
     batizandoNome,
     paiNome,
@@ -72,58 +118,156 @@ app.post('/api/inscricoes', (req, res) => {
     dataReuniao
   } = req.body
 
-  if (
-    !batizandoNome ||
-    !paiNome ||
-    !maeNome ||
-    !padrinhoNome ||
-    !madrinhaNome
-  ) {
+  if (!batizandoNome || !paiNome || !maeNome || !padrinhoNome || !madrinhaNome) {
     return res.status(400).json({ ok: false, error: 'Campos obrigatórios ausentes' })
   }
 
-  const inscricao = {
-    id: seq++,
-    criadoEm: new Date().toISOString(),
-    dataReuniao: dataReuniao || '',
-    batizando: { nome: batizandoNome },
-    pai: { nome: paiNome, celular: paiCelular || '', presente: false },
-    mae: { nome: maeNome, celular: maeCelular || '', presente: false },
-    padrinho: { nome: padrinhoNome, celular: '', presente: false },
-    madrinha: { nome: madrinhaNome, celular: '', presente: false }
+  if (!paiCelular && !maeCelular) {
+    return res.status(400).json({ ok: false, error: 'Informe pelo menos um número de celular (Pai ou Mãe)' })
   }
 
-  inscricoes.push(inscricao)
-  io.emit('nova_inscricao', inscricao)
+  const payload = {
+    baptized_name: batizandoNome,
+    father_name: paiNome,
+    mother_name: maeNome,
+    godfather_name: padrinhoNome,
+    godmother_name: madrinhaNome,
+    contact_phone: paiCelular || maeCelular,
+    meeting_date: dataReuniao || new Date().toISOString().split('T')[0],
+    confirmed_father: false,
+    confirmed_mother: false,
+    confirmed_godfather: false,
+    confirmed_godmother: false
+  }
+
+  const { data, error } = await supabase
+    .from('registrations')
+    .insert(payload)
+    .select()
+    .single()
+
+  if (error) {
+    console.error(error)
+    return res.status(500).json({ ok: false, error: 'Erro ao salvar no banco' })
+  }
+
+  const novo = dbToFrontend(data)
+  io.emit('nova_inscricao', novo)
   res.status(201).json({ ok: true })
 })
 
-app.post('/api/presenca', (req, res) => {
+app.post('/api/presenca', async (req, res) => {
   const { id, role, presente } = req.body
-  const inscricao = inscricoes.find(i => i.id === Number(id))
-
-  if (inscricao && inscricao[role]) {
-    inscricao[role].presente = !!presente
-    io.emit('atualizacao_presenca', { id: inscricao.id, role, presente: inscricao[role].presente })
-    return res.json({ ok: true })
+  
+  // Mapear role do frontend para coluna do banco
+  const map = {
+    'pai': 'confirmed_father',
+    'mae': 'confirmed_mother',
+    'padrinho': 'confirmed_godfather',
+    'madrinha': 'confirmed_godmother'
   }
-  res.status(404).json({ ok: false, error: 'Inscrição não encontrada' })
+  
+  const coluna = map[role]
+  if (!coluna) return res.status(400).json({ ok: false, error: 'Role inválida' })
+
+  const { error } = await supabase
+    .from('registrations')
+    .update({ [coluna]: !!presente })
+    .eq('id', id)
+
+  if (error) {
+    console.error(error)
+    return res.status(500).json({ ok: false, error: 'Erro ao atualizar' })
+  }
+
+  io.emit('atualizacao_presenca', { id, role, presente: !!presente })
+  return res.json({ ok: true })
 })
 
-app.delete('/api/inscricoes/:id', requireAuth, (req, res) => {
-  const id = Number(req.params.id)
-  const index = inscricoes.findIndex(i => i.id === id)
+app.delete('/api/inscricoes/:id', requireAuth, async (req, res) => {
+  const id = req.params.id // Agora é UUID string, não Number
+  
+  const { error } = await supabase
+    .from('registrations')
+    .delete()
+    .eq('id', id)
 
-  if (index !== -1) {
-    inscricoes.splice(index, 1)
-    io.emit('inscricao_removida', id)
-    return res.json({ ok: true })
+  if (error) {
+    console.error(error)
+    return res.status(500).json({ ok: false, error: 'Erro ao deletar' })
   }
-  res.status(404).json({ ok: false, error: 'Inscrição não encontrada' })
+
+  io.emit('inscricao_removida', id)
+  return res.json({ ok: true })
+})
+
+app.get('/api/admins', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('admin_emails').select('email').order('email', { ascending: true })
+    if (error) {
+      console.error('Erro ao listar admins', error)
+      return res.status(500).json({ ok: false, error: 'Erro ao carregar administradores' })
+    }
+    const lista = Array.isArray(data) ? data.map(a => a.email) : []
+    return res.json({ ok: true, items: lista })
+  } catch (e) {
+    console.error('Erro inesperado ao listar admins', e)
+    return res.status(500).json({ ok: false, error: 'Erro no servidor' })
+  }
+})
+
+app.post('/api/admins', requireAuth, async (req, res) => {
+  const { email } = req.body
+  if (!email || !String(email).includes('@')) {
+    return res.status(400).json({ ok: false, error: 'E-mail inválido' })
+  }
+  try {
+    const normalized = String(email).trim().toLowerCase()
+    const { error } = await supabase.from('admin_emails').insert({ email: normalized })
+    if (error) {
+      if (String(error.message).toLowerCase().includes('duplicate') || String(error.code) === '23505') {
+        return res.status(409).json({ ok: false, error: 'E-mail já é administrador' })
+      }
+      console.error('Erro ao adicionar admin', error)
+      return res.status(500).json({ ok: false, error: 'Erro ao adicionar administrador' })
+    }
+    return res.status(201).json({ ok: true })
+  } catch (e) {
+    console.error('Erro inesperado ao adicionar admin', e)
+    return res.status(500).json({ ok: false, error: 'Erro no servidor' })
+  }
+})
+
+app.delete('/api/admins/:email', requireAuth, async (req, res) => {
+  const email = req.params.email
+  if (!email) {
+    return res.status(400).json({ ok: false, error: 'E-mail inválido' })
+  }
+  try {
+    const { error } = await supabase.from('admin_emails').delete().eq('email', email)
+    if (error) {
+      console.error('Erro ao remover admin', error)
+      return res.status(500).json({ ok: false, error: 'Erro ao remover administrador' })
+    }
+    return res.json({ ok: true })
+  } catch (e) {
+    console.error('Erro inesperado ao remover admin', e)
+    return res.status(500).json({ ok: false, error: 'Erro no servidor' })
+  }
 })
 
 const PORT = process.env.PORT || 3000
-server.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`)
-  console.log('AVISO: Dados armazenados em memória. Reiniciar o servidor apagará as inscrições.')
+const os = require('os')
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor rodando na porta ${PORT} com Supabase conectado`)
+  const interfaces = os.networkInterfaces()
+  console.log('--- Endereços para acesso na rede ---')
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        console.log(`Acesse no celular/outros PCs: http://${iface.address}:${PORT}/admin`)
+      }
+    }
+  }
+  console.log('-------------------------------------')
 })
