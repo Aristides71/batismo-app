@@ -37,6 +37,16 @@ app.post('/login', (req, res) => {
   res.status(401).json({ ok: false, error: 'Credenciais inválidas' })
 })
 
+app.get('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.redirect('/admin')
+    }
+    res.clearCookie('connect.sid')
+    res.redirect('/')
+  })
+})
+
 app.get('/admin', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'private', 'admin.html'))
 })
