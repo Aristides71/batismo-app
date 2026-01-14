@@ -32,6 +32,13 @@ const requireAuth = (req, res, next) => {
   res.redirect('/login.html')
 }
 
+const requireAuthApi = (req, res, next) => {
+  if (req.session && req.session.authenticated) {
+    return next()
+  }
+  return res.status(401).json({ ok: false, error: 'Não autenticado' })
+}
+
 const requireOwner = (req, res, next) => {
   if (req.session && req.session.authenticated && req.session.role === 'owner') {
     return next()
@@ -145,12 +152,14 @@ const carregarInscricoes = async () => {
   return data.map(dbToFrontend)
 }
 
-app.get('/api/inscricoes', requireAuth, async (req, res) => {
+app.get('/api/inscricoes', requireAuthApi, async (req, res) => {
+  console.log('API Inscricoes chamada por:', req.session.email)
   try {
     const lista = await carregarInscricoes()
+    console.log('Inscricoes carregadas:', lista.length)
     res.json({ ok: true, items: lista })
   } catch (e) {
-    console.error(e)
+    console.error('Erro API inscricoes:', e)
     res.status(500).json({ ok: false, error: 'Erro ao listar' })
   }
 })

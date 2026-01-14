@@ -739,11 +739,21 @@ carregarUsuarioAtual()
 async function carregarInscricoesHTTP() {
   try {
     const res = await fetch('/api/inscricoes')
+    if (res.status === 401) {
+      window.location.href = '/login.html'
+      return
+    }
     const body = await res.json()
     if (res.ok && body.ok && Array.isArray(body.items)) {
+      console.log('Inscrições carregadas via HTTP:', body.items.length)
       inscricoes = body.items
       render()
       updateCharts()
+      if (inscricoes.length === 0) {
+        document.getElementById('inscricoes-body').innerHTML = '<tr><td colspan="12" style="text-align:center; padding: 20px;">Nenhuma inscrição encontrada.</td></tr>'
+      }
+    } else {
+      console.error('Erro ao carregar inscrições:', body.error)
     }
   } catch (e) {
     console.error('Erro ao carregar via HTTP:', e)
