@@ -734,3 +734,19 @@ if (btnAddMeeting) {
 
 // Inicia verificação de usuário
 carregarUsuarioAtual()
+
+// Carregar inscrições via HTTP (backup do Socket)
+async function carregarInscricoesHTTP() {
+  try {
+    const res = await fetch('/api/inscricoes')
+    const body = await res.json()
+    if (res.ok && body.ok && Array.isArray(body.items)) {
+      inscricoes = body.items
+      render()
+      updateCharts()
+    }
+  } catch (e) {
+    console.error('Erro ao carregar via HTTP:', e)
+  }
+}
+carregarInscricoesHTTP()

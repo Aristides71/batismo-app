@@ -145,6 +145,16 @@ const carregarInscricoes = async () => {
   return data.map(dbToFrontend)
 }
 
+app.get('/api/inscricoes', requireAuth, async (req, res) => {
+  try {
+    const lista = await carregarInscricoes()
+    res.json({ ok: true, items: lista })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ ok: false, error: 'Erro ao listar' })
+  }
+})
+
 io.on('connection', async socket => {
   const lista = await carregarInscricoes()
   socket.emit('lista_inscricoes', lista)
