@@ -4,7 +4,100 @@ const filtroInput = document.getElementById('filtro')
 const contadorEl = document.getElementById('contador')
 const btnExportar = document.getElementById('btn-exportar')
 const btnPDF = document.getElementById('btn-pdf')
-const btnFiltros = document.getElementById('btn-filtros')
+const adminEmailInput = document.getElementById('admin-email-input')
+const adminEmailAdd = document.getElementById('admin-email-add')
+const adminEmailList = document.getElementById('admin-email-list')
+const adminPermsSection = document.querySelector('.admin-perms')
+const meetingDatesSection = document.querySelector('.meeting-dates-section')
+const meetingList = document.getElementById('meeting-list')
+const btnAddMeeting = document.getElementById('btn-add-meeting')
+const newMeetingDate = document.getElementById('new-meeting-date')
+const newMeetingTime = document.getElementById('new-meeting-time')
+
+let currentUserRole = 'admin'
+
+async function carregarDatasReuniao() {
+  if (!meetingList) return
+  try {
+    const res = await fetch('/api/admin/datas')
+    const body = await res.json()
+    if (res.ok && body.ok) {
+      meetingList.innerHTML = ''
+      const items = body.items || []
+      items.forEach(item => {
+        const li = document.createElement('li')
+        li.style.display = 'flex'
+        li.style.justifyContent = 'space-between'
+        li.style.padding = '8px'
+        li.style.borderBottom = '1px solid #eee'
+        
+        const span = document.createElement('span')
+        span.textContent = `${formatDateShort(item.meeting_date)} às ${item.meeting_time.slice(0, 5)}`
+        
+        const btn = document.createElement('button')
+        btn.textContent = 'Remover'
+        btn.style.marginLeft = '10px'
+        btn.onclick = async () => {
+          if(!confirm('Remover esta data?')) return
+          try {
+            await fetch(`/api/admin/datas/${item.id}`, { method: 'DELETE' })
+            carregarDatasReuniao()
+          } catch(e) { alert('Erro ao remover') }
+        }
+        
+        li.appendChild(span)
+        li.appendChild(btn)
+        meetingList.appendChild(li)
+      })
+    }
+  } catch (e) { console.error(e) }
+}
+
+if (btnAddMeeting) {
+  btnAddMeeting.onclick = async () => {
+    const d = newMeetingDate.value
+    const t = newMeetingTime.value
+    if (!d || !t) return alert('Preencha data e hora')
+    try {
+      const res = await fetch('/api/admin/datas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: d, hora: t })
+      })
+      if (res.ok) {
+        newMeetingDate.value = ''
+        carregarDatasReuniao()
+      } else {
+        alert('Erro ao adicionar')
+      }
+    } catch (e) { alert('Erro conexao') }
+  }
+}
+
+async function carregarUsuarioAtual() {
+  try {
+    const res = await fetch('/api/me')
+    if (!res.ok) {
+      window.location.href = '/login.html'
+      return
+    }
+    const body = await res.json().catch(() => ({}))
+    if (body && body.ok && body.role) {
+      currentUserRole = body.role
+    }
+    if (currentUserRole !== 'owner') {
+      if (adminPermsSection) adminPermsSection.style.display = 'none'
+      if (meetingDatesSection) meetingDatesSection.style.display = 'none'
+    }
+    if (currentUserRole === 'owner') {
+      if (meetingDatesSection) meetingDatesSection.style.display = 'block'
+      carregarAdmins()
+      carregarDatasReuniao()
+    }
+  } catch (e) {
+    window.location.href = '/login.html'
+  }
+}
 const areaFiltros = document.getElementById('area-filtros')
 const btnLimparFiltros = document.getElementById('btn-limpar-filtros')
 
@@ -20,6 +113,7 @@ const filtroPresenca = document.getElementById('filtro-presenca')
 let inscricoes = []
 let dailyChart = null
 let monthlyChart = null
+let adminEmails = []
 
 function updateCharts() {
   const now = new Date()
@@ -50,6 +144,15 @@ function updateCharts() {
     }
   })
 
+  // Update Stats Elements
+  const elYesterday = document.getElementById('stat-yesterday')
+  const elToday = document.getElementById('stat-today')
+  const elMonth = document.getElementById('stat-month')
+
+  if(elYesterday) elYesterday.textContent = countYesterday
+  if(elToday) elToday.textContent = countToday
+  if(elMonth) elMonth.textContent = countMonth
+
   // Daily Chart
   const ctxDaily = document.getElementById('chart-daily').getContext('2d')
   if (dailyChart) dailyChart.destroy()
@@ -67,6 +170,10 @@ function updateCharts() {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
       scales: {
         y: { beginAtZero: true, ticks: { stepSize: 1 } }
       }
@@ -77,37 +184,12 @@ function updateCharts() {
   const ctxMonthly = document.getElementById('chart-monthly').getContext('2d')
   if (monthlyChart) monthlyChart.destroy()
   
-  // Maybe show breakdown by week or just total?
-  // User asked for "inscrições efetuadas no dia, no dia anterior, no mês"
-  // Let's just show "Este Mês" vs "Mês Passado" maybe? Or just a big bar for "Este Mês"?
-  // Or maybe a line chart of the month?
-  // Let's stick to simple Bar for "Este Mês" compared to maybe nothing or just visualize it.
-  // Actually, let's make it a Single Horizontal Bar or just a Doughnut chart for "Meta"?
-  // No, let's show "Total do Mês" as a single big metric or a simple bar.
-  // Let's show "Este Mês" vs "Total Geral" to give context?
-  // Or better: Daily breakdown of current month.
-  
-  // Let's do a simple bar chart for the month days so far?
-  // "quadros gerenciais contendo gráficos, de inscrições efetuadas no dia, no dia anterior, no mês"
-  // It implies 3 metrics. I already showed Day and Previous Day.
-  // I will add "Mês Atual" to the first chart or make a separate one.
-  // Let's make the second chart show the trend of the last 7 days + Month Total in title.
-  
-  // Re-reading request: "gráficos, de inscrições efetuadas no dia, no dia anterior, no mês"
-  // It sounds like comparing these 3 values.
-  // Chart 1: Ontem vs Hoje.
-  // Chart 2: Mês Atual (Accumulated).
-  
-  // Let's put all 3 in one chart? 
-  // Scale issue: Month (30) vs Day (1).
-  // Let's keep separate.
-  
   monthlyChart = new Chart(ctxMonthly, {
     type: 'bar',
     data: {
       labels: ['Mês Atual'],
       datasets: [{
-        label: 'Total de Inscrições',
+        label: 'Total',
         data: [countMonth],
         backgroundColor: ['#3498db'],
         borderWidth: 1
@@ -115,6 +197,10 @@ function updateCharts() {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
       scales: {
         y: { beginAtZero: true, ticks: { stepSize: 1 } }
       }
@@ -241,6 +327,9 @@ function render() {
 
   const rows = dados.map(i => `
     <tr>
+      <td style="text-align: center;">
+        <input type="checkbox" class="row-select" value="${i.id}">
+      </td>
       <td data-label="ID">#${i.id}</td>
       <td data-label="Data Inscr.">${formatDate(i.criadoEm)}</td>
       <td data-label="Data Reunião">${formatDateShort(i.dataReuniao)}</td>
@@ -292,6 +381,43 @@ function render() {
       }
     })
   })
+}
+
+function renderAdmins() {
+  if (!adminEmailList) return
+  adminEmailList.innerHTML = ''
+  const items = adminEmails.slice().sort((a, b) => a.localeCompare(b))
+  items.forEach(email => {
+    const li = document.createElement('li')
+    const span = document.createElement('span')
+    span.textContent = email
+    const btn = document.createElement('button')
+    btn.textContent = 'Remover'
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Remover ${email} da lista de administradores?`)) return
+      try {
+        const res = await fetch(`/api/admins/${encodeURIComponent(email)}`, { method: 'DELETE' })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok || body.ok === false) {
+          const msg = body.error || 'Erro ao remover administrador'
+          alert(msg)
+          return
+        }
+        adminEmails = adminEmails.filter(e => e !== email)
+        renderAdmins()
+      } catch (e) {
+        alert('Erro ao remover administrador')
+      }
+    })
+    li.appendChild(span)
+    li.appendChild(btn)
+    adminEmailList.appendChild(li)
+  })
+}
+
+function getSelectedIds() {
+  const checkboxes = document.querySelectorAll('.row-select:checked')
+  return Array.from(checkboxes).map(cb => Number(cb.value))
 }
 
 function toCSVValue(v) {
@@ -353,37 +479,37 @@ async function getLogoBase64() {
 }
 
 async function exportarPDF() {
+  if (!window.jspdf) {
+    alert('Erro: Biblioteca PDF não carregada. Recarregue a página.')
+    return
+  }
+  
   const { jsPDF } = window.jspdf
   const doc = new jsPDF('l', 'mm', 'a4') // Landscape
   
+  // Verifica plugin autotable
+  if (typeof doc.autoTable !== 'function') {
+    alert('Erro: Plugin AutoTable não carregado.')
+    return
+  }
+
   const logoData = await getLogoBase64()
   let startY = 25
 
   if (logoData) {
-    // Carrega imagem para obter dimensões originais
     const img = new Image()
     img.src = logoData
-    
-    // Proporção original
     const ratio = img.width / img.height
-    const pdfH = 25 // Altura fixa
-    const pdfW = pdfH * ratio // Largura proporcional
-
-    // Adiciona logo (x, y, w, h)
+    const pdfH = 25
+    const pdfW = pdfH * ratio
     doc.addImage(logoData, 'PNG', 14, 10, pdfW, pdfH)
-    
-    // Ajusta textos para o lado da logo (considerando a largura calculada)
     const textX = 14 + pdfW + 5
-    
     doc.setFontSize(16)
     doc.text('Paróquia Santíssima Trindade', textX, 18)
-    
     doc.setFontSize(12)
     doc.text('Relatório de Inscrições - Batismo', textX, 25)
-    
     doc.setFontSize(10)
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, textX, 30)
-    
     startY = 40
   } else {
     doc.text('Relatório de Inscrições - Batismo', 14, 15)
@@ -391,9 +517,19 @@ async function exportarPDF() {
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 20)
   }
   
-  const dados = getFilteredData()
+  // Selection Logic
+  const selectedIds = getSelectedIds()
+  let dados = getFilteredData()
   
-  // Ordena por ID Crescente (Sequência de Inscrição)
+  if (selectedIds.length > 0) {
+    dados = dados.filter(i => selectedIds.includes(i.id))
+  }
+
+  if (dados.length === 0) {
+    alert('Nenhuma inscrição encontrada para gerar o relatório.')
+    return
+  }
+  
   dados.sort((a, b) => a.id - b.id)
 
   const tableData = dados.map(i => [
@@ -417,8 +553,6 @@ async function exportarPDF() {
       if (data.section === 'body') {
         const i = dados[data.row.index]
         const col = data.column.index
-        
-        // Pai (4), Mãe (5), Padrinho (6), Madrinha (7)
         let presente = false
         let isPersonColumn = false
         
@@ -429,34 +563,21 @@ async function exportarPDF() {
         
         if (isPersonColumn) {
           if (presente) {
-            data.cell.styles.textColor = [39, 174, 96] // Verde
+            data.cell.styles.textColor = [39, 174, 96]
             data.cell.styles.fontStyle = 'bold'
           } else {
-            data.cell.styles.textColor = [192, 57, 43] // Vermelho
+            data.cell.styles.textColor = [192, 57, 43]
           }
         }
       }
     }
   })
 
-  // Gera Blob e abre em Popup (Nova Janela)
   const blob = doc.output('blob')
   const url = URL.createObjectURL(blob)
-  
-  // Configuração da janela popup
-  const w = 1000
-  const h = 800
-  const left = (screen.width / 2) - (w / 2)
-  const top = (screen.height / 2) - (h / 2)
-  
-  window.open(
-    url, 
-    'PDFPreview', 
-    `width=${w},height=${h},top=${top},left=${left},scrollbars=yes,resizable=yes`
-  )
+  window.open(url, '_blank')
 }
 
-// Event Listeners
 btnFiltros.addEventListener('click', () => {
   areaFiltros.style.display = areaFiltros.style.display === 'none' ? 'flex' : 'none'
 })
@@ -479,6 +600,54 @@ btnLimparFiltros.addEventListener('click', () => {
 
 btnExportar.addEventListener('click', exportarCSV)
 btnPDF.addEventListener('click', exportarPDF)
+
+async function carregarAdmins() {
+  if (!adminEmailList || currentUserRole !== 'owner') return
+  try {
+    const res = await fetch('/api/admins')
+    const body = await res.json()
+    if (!res.ok || body.ok === false) {
+      adminEmails = []
+      renderAdmins()
+      return
+    }
+    adminEmails = Array.isArray(body.items) ? body.items : []
+    renderAdmins()
+  } catch (e) {
+    adminEmails = []
+    renderAdmins()
+  }
+}
+
+if (adminEmailAdd && adminEmailInput) {
+  adminEmailAdd.addEventListener('click', async () => {
+    const email = adminEmailInput.value.trim()
+    if (!email) {
+      alert('Informe um e-mail')
+      return
+    }
+    try {
+      const res = await fetch('/api/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || body.ok === false) {
+        const msg = body.error || 'Erro ao adicionar administrador'
+        alert(msg)
+        return
+      }
+      if (!adminEmails.includes(email.toLowerCase())) {
+        adminEmails.push(email.toLowerCase())
+      }
+      adminEmailInput.value = ''
+      renderAdmins()
+    } catch (e) {
+      alert('Erro ao adicionar administrador')
+    }
+  })
+}
 
 socket.on('lista_inscricoes', lista => {
   inscricoes = Array.isArray(lista) ? lista.slice() : []
@@ -505,3 +674,63 @@ socket.on('atualizacao_presenca', ({ id, role, presente }) => {
     render()
   }
 })
+
+document.getElementById('check-all').addEventListener('change', (e) => {
+  const isChecked = e.target.checked
+  document.querySelectorAll('.row-select').forEach(cb => {
+    cb.checked = isChecked
+  })
+})
+
+async function carregarUsuarioAtual() {
+  try {
+    const res = await fetch('/api/me')
+    if (!res.ok) {
+      window.location.href = '/login.html'
+      return
+    }
+    const body = await res.json().catch(() => ({}))
+    if (body && body.ok && body.role) {
+      currentUserRole = body.role
+    }
+    if (currentUserRole !== 'owner') {
+      if (adminPermsSection) adminPermsSection.style.display = 'none'
+      if (meetingDatesSection) meetingDatesSection.style.display = 'none'
+    }
+    if (currentUserRole === 'owner') {
+      if (adminPermsSection) adminPermsSection.style.display = 'block'
+      if (meetingDatesSection) meetingDatesSection.style.display = 'block'
+      carregarAdmins()
+      carregarDatasReuniao()
+    }
+  } catch (e) {
+    window.location.href = '/login.html'
+  }
+}
+
+if (btnAddMeeting) {
+  btnAddMeeting.onclick = async () => {
+    const data = newMeetingDate.value
+    const hora = newMeetingTime.value
+    if (!data || !hora) {
+      alert('Informe data e hora')
+      return
+    }
+    try {
+      const res = await fetch('/api/admin/datas', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ data, hora })
+      })
+      if (res.ok) {
+        newMeetingDate.value = ''
+        carregarDatasReuniao()
+      } else {
+        alert('Erro ao adicionar data')
+      }
+    } catch(e) { console.error(e); alert('Erro ao adicionar') }
+  }
+}
+
+// Inicia verificação de usuário
+carregarUsuarioAtual()

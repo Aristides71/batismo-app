@@ -1,6 +1,37 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const form = document.getElementById('inscricao-form')
   const statusEl = document.getElementById('status')
+  const selectData = document.getElementById('dataReuniao')
+
+  // Carregar datas disponíveis
+  try {
+    const res = await fetch('/api/datas-reuniao')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.ok && Array.isArray(data.items)) {
+        selectData.innerHTML = '<option value="">Selecione uma data...</option>'
+        if (data.items.length === 0) {
+          selectData.innerHTML = '<option value="">Nenhuma data disponível</option>'
+        } else {
+          data.items.forEach(item => {
+            const dateObj = new Date(item.meeting_date)
+            // Ajuste fuso horário se necessário, mas date string YYYY-MM-DD é segura se usada como string
+            // Vamos formatar para PT-BR visualmente
+            const dataFormatada = dateObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+            const opt = document.createElement('option')
+            opt.value = item.meeting_date
+            opt.textContent = `${dataFormatada} às ${item.meeting_time.slice(0, 5)}`
+            selectData.appendChild(opt)
+          })
+        }
+      }
+    } else {
+      selectData.innerHTML = '<option value="">Erro ao carregar datas</option>'
+    }
+  } catch (e) {
+    console.error(e)
+    selectData.innerHTML = '<option value="">Erro de conexão</option>'
+  }
 
   form.addEventListener('submit', async e => {
     e.preventDefault()

@@ -5,37 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login Administrativo</title>
   <link rel="stylesheet" href="/style.css">
-  <style>
-    .login-container {
-      max-width: 400px;
-      margin: 100px auto;
-      text-align: center;
-      background: #fff;
-      padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    .error-msg {
-      color: #e74c3c;
-      margin-top: 10px;
-      display: none;
-    }
-  </style>
 </head>
 <body>
-  <div class="login-container">
+  <div class="container login">
     <div class="logo-container">
       <img src="/logo-trindade.png" alt="Logo Paróquia Santíssima Trindade" class="logo">
     </div>
     <div class="cabecalho">Paróquia Santíssima Trindade</div>
-    <h2>Acesso Administrativo</h2>
+    <h1>Acesso Administrativo</h1>
     <form id="login-form">
       <div class="form-group">
-        <label for="email" style="text-align: left;">Email</label>
+        <label for="email">Email</label>
         <input type="email" id="email" name="email" required placeholder="admin@exemplo.com">
       </div>
-      <div class="form-group">
-        <label for="senha" style="text-align: left;">Senha</label>
+      <div class="form-group" style="margin-top: 15px; margin-bottom: 25px;">
+        <label for="senha">Senha</label>
         <input type="password" id="senha" name="senha" required>
       </div>
       <button type="submit">Entrar</button>
@@ -57,9 +41,12 @@
           body: JSON.stringify({ email, senha })
         });
 
-        if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+
+        if (res.ok && body && body.ok) {
           window.location.href = '/admin';
         } else {
+          errorMsg.textContent = (body && body.error) || 'Email ou senha incorretos.';
           errorMsg.style.display = 'block';
         }
       } catch (err) {

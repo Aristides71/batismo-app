@@ -11,7 +11,7 @@
 </head>
 <body>
   <div class="container admin-page">
-    <button onclick="window.location.href='/logout'" style="position: absolute; top: 20px; right: 20px; background-color: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; z-index: 100;">Sair</button>
+    <button onclick="window.location.href='/logout'" class="btn-logout">Sair</button>
     
     <div class="logo-container">
       <img src="/logo-trindade.png" alt="Logo Paróquia Santíssima Trindade" class="logo">
@@ -22,11 +22,22 @@
     <div class="dashboard-container">
       <div class="chart-card">
         <h3>Inscrições Recentes</h3>
-        <canvas id="chart-daily"></canvas>
+        <div class="chart-stats">
+          <span>Ontem: <strong id="stat-yesterday">0</strong></span>
+          <span>Hoje: <strong id="stat-today">0</strong></span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="chart-daily"></canvas>
+        </div>
       </div>
       <div class="chart-card">
         <h3>Inscrições do Mês</h3>
-        <canvas id="chart-monthly"></canvas>
+        <div class="chart-stats">
+          <span>Total: <strong id="stat-month">0</strong></span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="chart-monthly"></canvas>
+        </div>
       </div>
     </div>
 
@@ -53,7 +64,7 @@
       </div>
       <div class="filtro-grupo">
         <label>Sequência (ID):</label>
-        <input type="number" id="filtro-seq-ini" placeholder="De" style="width:60px"> a <input type="number" id="filtro-seq-fim" placeholder="Até" style="width:60px">
+        <input type="number" id="filtro-seq-ini" placeholder="De"> a <input type="number" id="filtro-seq-fim" placeholder="Até">
       </div>
       <div class="filtro-grupo">
         <label>Status Presença:</label>
@@ -66,9 +77,29 @@
       <button id="btn-limpar-filtros">Limpar Filtros</button>
     </div>
 
+    <div class="admin-perms">
+      <h2>Administradores</h2>
+      <div class="admin-perms-form">
+        <input type="email" id="admin-email-input" placeholder="novo.admin@paroquia.com">
+        <button id="admin-email-add">Adicionar Administrador</button>
+      </div>
+      <ul id="admin-email-list" class="lista-simples"></ul>
+    </div>
+
+    <div class="meeting-dates-section" style="display:none; margin-top: 30px;">
+      <h2>Datas de Reunião</h2>
+      <div class="admin-perms-form">
+        <input type="date" id="new-meeting-date">
+        <input type="time" id="new-meeting-time" value="19:00">
+        <button id="btn-add-meeting">Adicionar Data</button>
+      </div>
+      <ul id="meeting-list" class="lista-simples"></ul>
+    </div>
+
     <table class="tabela">
       <thead>
         <tr>
+          <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all"></th>
           <th>ID</th>
           <th>Data Inscr.</th>
           <th>Data Reunião</th>
@@ -89,4 +120,4 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/admin.js"></script>
 </body>
-<html>
+</html>
