@@ -227,21 +227,45 @@ form button:hover, .btn-primary:hover {
 }
 
 /* Table Styles (Admin) */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
+  margin-top: 30px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  /* Scrollbar customizada */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #edf2f7;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: #edf2f7;
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 4px;
+}
+
 table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  margin-top: 30px;
+  /* margin-top removido pois o wrapper cuida disso */
   background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  /* border-radius e shadow removidos pois o wrapper cuida disso */
 }
 
 table th, table td {
   padding: 15px;
   text-align: left;
   border-bottom: 1px solid #edf2f7;
+  white-space: nowrap; /* Garante que não quebre linha em desktop/mobile igual */
 }
 
 table th {
@@ -629,13 +653,7 @@ input:checked + .slider:before {
     min-width: 100%;
   }
 
-  /* Tabela Responsiva */
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-    width: 100%;
-  }
+  /* Tabela Responsiva: Regras removidas pois .table-responsive cuida disso */
   
   th, td {
     padding: 10px;

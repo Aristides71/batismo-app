@@ -88,6 +88,9 @@
 
     <div class="meeting-dates-section" style="display:none; margin-top: 30px;">
       <h2>Datas de Reunião</h2>
+      <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+        Cadastre as datas das próximas reuniões de preparação para o Batismo. Estas datas aparecerão no formulário de inscrição.
+      </p>
       <div class="admin-perms-form">
         <input type="date" id="new-meeting-date">
         <input type="time" id="new-meeting-time" value="19:00">
@@ -96,25 +99,27 @@
       <ul id="meeting-list" class="lista-simples"></ul>
     </div>
 
-    <table class="tabela">
-      <thead>
-        <tr>
-          <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all"></th>
-          <th>ID</th>
-          <th>Data Inscr.</th>
-          <th>Data Reunião</th>
-          <th>Batizando</th>
-          <th>Pai</th>
-          <th>Celular Pai</th>
-          <th>Mãe</th>
-          <th>Celular Mãe</th>
-          <th>Padrinho</th>
-          <th>Madrinha</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody id="inscricoes-body"></tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all"></th>
+            <th>ID</th>
+            <th>Data Inscr.</th>
+            <th>Data Reunião</th>
+            <th>Batizando</th>
+            <th>Pai</th>
+            <th>Celular Pai</th>
+            <th>Mãe</th>
+            <th>Celular Mãe</th>
+            <th>Padrinho</th>
+            <th>Madrinha</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="inscricoes-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
