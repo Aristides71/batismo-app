@@ -5,6 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login Administrativo</title>
   <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Estilos específicos para melhorar feedback visual */
+    .login-footer {
+      margin-top: 30px;
+      font-size: 0.8rem;
+      color: #888;
+      text-align: center;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      color: #555;
+      font-family: monospace;
+      margin-top: 5px;
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .error-box {
+      background-color: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #b91c1c;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 15px;
+      display: none;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <div class="container login">
@@ -13,6 +51,7 @@
     </div>
     <div class="cabecalho">Paróquia Santíssima Trindade</div>
     <h1>Acesso Administrativo</h1>
+    
     <form id="login-form">
       <div class="form-group">
         <label for="email">Email</label>
@@ -20,19 +59,54 @@
       </div>
       <div class="form-group" style="margin-top: 15px; margin-bottom: 25px;">
         <label for="senha">Senha</label>
-        <input type="password" id="senha" name="senha" required>
+        <input type="password" id="senha" name="senha" required placeholder="Sua senha de acesso">
       </div>
+      
       <button type="submit">Entrar</button>
-      <p id="error-msg" class="error-msg">Email ou senha incorretos.</p>
+      
+      <div id="feedback-area" style="display: none; margin-top: 20px; padding: 15px; border-radius: 8px;">
+        <p id="error-msg" style="margin: 0; font-weight: 500;"></p>
+      </div>
+
     </form>
+
+    <div class="login-footer">
+      <p>Área restrita à equipe de Batismo.</p>
+      <div id="server-status" class="status-badge">Verificando sistema...</div>
+    </div>
   </div>
 
   <script>
+    const statusEl = document.getElementById('server-status');
+
+    // Carregar status do servidor ao abrir
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(data => {
+        if(data.startedAt) {
+          const date = new Date(data.startedAt);
+          statusEl.textContent = `Sistema online desde: ${date.toLocaleString('pt-BR')}`;
+          statusEl.title = "Se você alterou a senha recentemente e ela não funciona, peça para reiniciar o servidor.";
+        }
+      })
+      .catch(() => {
+        statusEl.textContent = "Sistema offline ou inacessível";
+        statusEl.style.color = "red";
+      });
+
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('email').value;
       const senha = document.getElementById('senha').value;
+      
+      const feedbackArea = document.getElementById('feedback-area');
       const errorMsg = document.getElementById('error-msg');
+      const btn = e.target.querySelector('button');
+
+      // Reset feedback
+      feedbackArea.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
 
       try {
         const res = await fetch('/login', {
@@ -44,15 +118,34 @@
         const body = await res.json().catch(() => ({}));
 
         if (res.ok && body && body.ok) {
-          window.location.href = '/admin';
+          btn.textContent = 'Sucesso! Redirecionando...';
+          btn.style.backgroundColor = '#27ae60';
+          setTimeout(() => {
+             window.location.href = '/admin';
+          }, 500);
         } else {
-          errorMsg.textContent = (body && body.error) || 'Email ou senha incorretos.';
-          errorMsg.style.display = 'block';
+          // Erro
+          feedbackArea.style.display = 'block';
+          feedbackArea.style.backgroundColor = '#fdeea6'; // Amarelo suave
+          feedbackArea.style.color = '#c0392b';
+          feedbackArea.style.border = '1px solid #f39c12';
+          
+          errorMsg.textContent = (body && body.error) ? 
+            `Erro: ${body.error}` : 
+            'Credenciais inválidas. Verifique se a senha foi alterada recentemente.';
+            
+          btn.disabled = false;
+          btn.textContent = 'Entrar';
         }
       } catch (err) {
         console.error(err);
-        errorMsg.textContent = 'Erro de conexão.';
-        errorMsg.style.display = 'block';
+        feedbackArea.style.display = 'block';
+        feedbackArea.style.backgroundColor = '#ffcccc';
+        feedbackArea.style.color = '#a00';
+        errorMsg.textContent = 'Erro de conexão com o servidor.';
+        
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
       }
     });
   </script>

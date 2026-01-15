@@ -72,6 +72,7 @@ app.post('/login', async (req, res) => {
   }
 
   if (senha !== MAIN_ADMIN_PASSWORD) {
+    console.log(`[AUTH] Senha incorreta para Admin Secundário: ${emailNormalizado}`)
     return res.status(401).json({ ok: false, error: 'Credenciais inválidas' })
   }
 
@@ -245,12 +246,16 @@ app.post('/api/inscricoes', async (req, res) => {
   } = req.body
 
   if (!batizandoNome || !paiNome || !maeNome || !padrinhoNome || !madrinhaNome) {
+    console.log('ERRO POST: Campos obrigatórios faltando', req.body)
     return res.status(400).json({ ok: false, error: 'Campos obrigatórios ausentes' })
   }
 
   if (!paiCelular && !maeCelular) {
+    console.log('ERRO POST: Nenhum celular informado')
     return res.status(400).json({ ok: false, error: 'Informe pelo menos um número de celular (Pai ou Mãe)' })
   }
+
+  console.log('POST /api/inscricoes - Salvando:', batizandoNome)
 
   const payload = {
     baptized_name: batizandoNome,
@@ -390,6 +395,13 @@ const PORT = process.env.PORT || 3000
 const os = require('os')
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor rodando na porta ${PORT} com Supabase conectado`)
+
+  console.log('--- Configuração de Login ---')
+  if (MAIN_ADMIN_EMAIL) console.log(`Admin Principal: ${MAIN_ADMIN_EMAIL}`)
+  if (MAIN_ADMIN_PASSWORD) console.log(`Senha Admin: [CONFIGURADA] (Tamanho: ${MAIN_ADMIN_PASSWORD.length} caracteres)`)
+  else console.log('AVISO: Senha Admin NÃO configurada!')
+  console.log('-----------------------------')
+
   const interfaces = os.networkInterfaces()
   console.log('--- Endereços para acesso na rede ---')
   for (const name of Object.keys(interfaces)) {

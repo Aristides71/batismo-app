@@ -653,11 +653,92 @@ input:checked + .slider:before {
     min-width: 100%;
   }
 
-  /* Tabela Responsiva: Regras removidas pois .table-responsive cuida disso */
+  /* Tabela Responsiva - Card View no Mobile */
+  .table-responsive {
+    background: transparent;
+    box-shadow: none;
+    overflow-x: visible; /* Remove scroll horizontal pois será card */
+  }
+
+  .table-responsive table, 
+  .table-responsive thead, 
+  .table-responsive tbody, 
+  .table-responsive th, 
+  .table-responsive td, 
+  .table-responsive tr { 
+    display: block; 
+  }
+
+  .table-responsive thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .table-responsive tr { 
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+
+  .table-responsive td { 
+    border: none;
+    border-bottom: 1px solid #edf2f7; 
+    position: relative;
+    padding: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    white-space: normal;
+    min-height: 40px;
+  }
+
+  .table-responsive td:before { 
+    content: attr(data-label);
+    font-weight: 700;
+    color: #4a5568;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    text-align: left;
+    margin-right: 15px;
+    flex-shrink: 0;
+    width: 40%;
+  }
+
+  .table-responsive td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
   
+  /* Checkbox Row */
+  .table-responsive td:first-child {
+    justify-content: flex-start;
+  }
+  
+  .table-responsive td:first-child:before {
+    content: "Selecionar";
+  }
+
+  /* Ajuste para células com switch de presença */
+  .nome-com-presenca {
+    flex: 1;
+    justify-content: flex-end;
+  }
+  
+  .nome-com-presenca span {
+    text-align: right;
+    margin-right: 10px;
+    word-break: break-word;
+    font-size: 0.85rem;
+  }
+
   th, td {
     padding: 10px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
 
   /* Botão Sair e Link Admin */
@@ -680,6 +761,12 @@ input:checked + .slider:before {
   
   .admin-perms-form button {
     width: 100%;
+  }
+  
+  /* Aumentar área de toque em checkboxes mobile */
+  input[type="checkbox"] {
+    transform: scale(1.3);
+    margin: 5px;
   }
 }
 

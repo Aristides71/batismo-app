@@ -1,9 +1,36 @@
 const socket = io()
+
+socket.on('connect', () => {
+  console.log('Conectado ao WebSocket!')
+})
+
+socket.on('lista_inscricoes', (lista) => {
+  console.log('Recebida lista via socket:', lista.length)
+  inscricoes = lista
+  render()
+  updateCharts()
+})
+
+socket.on('nova_inscricao', (nova) => {
+  console.log('Nova inscrição recebida:', nova)
+  inscricoes.unshift(nova)
+  render()
+  updateCharts()
+})
+
+socket.on('inscricao_removida', (id) => {
+  console.log('Inscrição removida:', id)
+  inscricoes = inscricoes.filter(i => i.id !== id)
+  render()
+  updateCharts()
+})
+
 const tbody = document.getElementById('inscricoes-body')
 const filtroInput = document.getElementById('filtro')
 const contadorEl = document.getElementById('contador')
 const btnExportar = document.getElementById('btn-exportar')
 const btnPDF = document.getElementById('btn-pdf')
+const btnFiltros = document.getElementById('btn-filtros')
 const adminEmailInput = document.getElementById('admin-email-input')
 const adminEmailAdd = document.getElementById('admin-email-add')
 const adminEmailList = document.getElementById('admin-email-list')
@@ -405,7 +432,7 @@ function renderAdmins() {
 
 function getSelectedIds() {
   const checkboxes = document.querySelectorAll('.row-select:checked')
-  return Array.from(checkboxes).map(cb => Number(cb.value))
+  return Array.from(checkboxes).map(cb => cb.value)
 }
 
 function toCSVValue(v) {
@@ -518,7 +545,7 @@ async function exportarPDF() {
     return
   }
   
-  dados.sort((a, b) => a.id - b.id)
+  dados.sort((a, b) => String(a.id).localeCompare(String(b.id)))
 
   const tableData = dados.map(i => [
     i.id,
@@ -566,26 +593,32 @@ async function exportarPDF() {
   window.open(url, '_blank')
 }
 
-btnFiltros.addEventListener('click', () => {
-  areaFiltros.style.display = areaFiltros.style.display === 'none' ? 'flex' : 'none'
-})
+if (btnFiltros && areaFiltros) {
+  btnFiltros.addEventListener('click', () => {
+    areaFiltros.style.display = areaFiltros.style.display === 'none' ? 'flex' : 'none'
+  })
+}
 
-btnLimparFiltros.addEventListener('click', () => {
-  filtroDataInscricao.value = ''
-  filtroDataReuniao.value = ''
-  filtroInicio.value = ''
-  filtroFim.value = ''
-  filtroPresenca.value = 'todos'
-  render()
-})
+if (btnLimparFiltros) {
+  btnLimparFiltros.addEventListener('click', () => {
+    if (filtroDataInscricao) filtroDataInscricao.value = ''
+    if (filtroDataReuniao) filtroDataReuniao.value = ''
+    if (filtroInicio) filtroInicio.value = ''
+    if (filtroFim) filtroFim.value = ''
+    if (filtroPresenca) filtroPresenca.value = 'todos'
+    render()
+  })
+}
 
 ;[
   filtroInput, filtroDataInscricao, filtroDataReuniao,
   filtroInicio, filtroFim, filtroPresenca
-].forEach(el => el.addEventListener('input', render))
+].forEach(el => {
+  if (el) el.addEventListener('input', render)
+})
 
-btnExportar.addEventListener('click', exportarCSV)
-btnPDF.addEventListener('click', exportarPDF)
+if (btnExportar) btnExportar.addEventListener('click', exportarCSV)
+if (btnPDF) btnPDF.addEventListener('click', exportarPDF)
 
 async function carregarAdmins() {
   if (!adminEmailList || currentUserRole !== 'owner') return
