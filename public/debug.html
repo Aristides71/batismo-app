@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico Batismo</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+        #log { background: #fff; padding: 10px; border: 1px solid #ccc; height: 300px; overflow: auto; white-space: pre-wrap; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Diagnóstico de Conexão</h1>
+    <p>Use esta página para testar se o navegador consegue baixar os dados do servidor.</p>
+    <button onclick="executarTeste()">Iniciar Teste</button>
+    <br><br>
+    <div id="log">Aguardando início...</div>
+
+    <script>
+        function log(msg) {
+            const el = document.getElementById('log');
+            const linha = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+            el.innerText = el.innerText === 'Aguardando início...' ? linha : el.innerText + linha;
+            console.log(msg);
+        }
+
+        async function executarTeste() {
+            document.getElementById('log').innerText = '';
+            log('Iniciando diagnóstico...');
+            
+            // Teste 1: Autenticação
+            log('1. Verificando sessão (/api/me)...');
+            try {
+                const resMe = await fetch('/api/me');
+                log(`Status: ${resMe.status} ${resMe.statusText}`);
+                if (resMe.status === 401) {
+                    log('ERRO: Não autenticado. Por favor, faça login no painel primeiro.');
+                    return;
+                }
+                const jsonMe = await resMe.json();
+                log(`Usuário: ${JSON.stringify(jsonMe)}`);
+            } catch (e) {
+                log(`ERRO FATAL ao verificar sessão: ${e.message}`);
+                return;
+            }
+
+            // Teste 2: Dados de Inscrições
+            log('\n2. Buscando inscrições (/api/inscricoes)...');
+            try {
+                const start = performance.now();
+                const res = await fetch('/api/inscricoes');
+                const time = (performance.now() - start).toFixed(0);
+                log(`Resposta em ${time}ms. Status: ${res.status}`);
+                
+                const text = await res.text();
+                log(`Tamanho da resposta: ${text.length} bytes`);
+                
+                try {
+                    const json = JSON.parse(text);
+                    if (json.ok) {
+                        log(`SUCESSO: ${json.items.length} inscrições encontradas.`);
+                        if (json.items.length > 0) {
+                            log(`Exemplo ID 1: ${json.items[0].id}`);
+                            log(`Exemplo Nome 1: ${json.items[0].batizando.nome}`);
+                        } else {
+                            log('AVISO: Lista vazia retornada pelo servidor.');
+                        }
+                    } else {
+                        log(`ERRO API: ${json.error}`);
+                    }
+                } catch (e) {
+                    log(`ERRO JSON: Não foi possível ler o JSON. Resposta raw: ${text.substring(0, 100)}...`);
+                }
+            } catch (e) {
+                log(`ERRO REDE: ${e.message}`);
+            }
+
+            log('\nDiagnóstico concluído.');
+        }
+    </script>
+</body>
+</html>

@@ -642,7 +642,7 @@ socket.on('lista_inscricoes', lista => {
 })
 
 socket.on('inscricao_removida', id => {
-  inscricoes = inscricoes.filter(i => i.id !== Number(id))
+  inscricoes = inscricoes.filter(i => i.id !== id)
   render()
   updateCharts()
 })
