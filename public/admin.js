@@ -106,8 +106,6 @@ const filtroDataInscricao = document.getElementById('filtro-data-inscricao')
 const filtroDataReuniao = document.getElementById('filtro-data-reuniao')
 const filtroInicio = document.getElementById('filtro-inicio')
 const filtroFim = document.getElementById('filtro-fim')
-const filtroSeqIni = document.getElementById('filtro-seq-ini')
-const filtroSeqFim = document.getElementById('filtro-seq-fim')
 const filtroPresenca = document.getElementById('filtro-presenca')
 
 let inscricoes = []
@@ -238,8 +236,6 @@ function getFilterState() {
     dataReuniao: filtroDataReuniao.value,
     inicio: filtroInicio.value,
     fim: filtroFim.value,
-    seqIni: filtroSeqIni.value,
-    seqFim: filtroSeqFim.value,
     presenca: filtroPresenca.value
   }
 }
@@ -273,14 +269,6 @@ function passaFiltro(i, f) {
   }
   if (f.fim) {
     if (i.criadoEm.split('T')[0] > f.fim) return false
-  }
-
-  // Sequência (ID)
-  if (f.seqIni) {
-    if (i.id < Number(f.seqIni)) return false
-  }
-  if (f.seqFim) {
-    if (i.id > Number(f.seqFim)) return false
   }
 
   // Presença
@@ -587,15 +575,13 @@ btnLimparFiltros.addEventListener('click', () => {
   filtroDataReuniao.value = ''
   filtroInicio.value = ''
   filtroFim.value = ''
-  filtroSeqIni.value = ''
-  filtroSeqFim.value = ''
   filtroPresenca.value = 'todos'
   render()
 })
 
 ;[
   filtroInput, filtroDataInscricao, filtroDataReuniao,
-  filtroInicio, filtroFim, filtroSeqIni, filtroSeqFim, filtroPresenca
+  filtroInicio, filtroFim, filtroPresenca
 ].forEach(el => el.addEventListener('input', render))
 
 btnExportar.addEventListener('click', exportarCSV)

@@ -63,10 +63,6 @@
         <input type="date" id="filtro-inicio" title="Início"> a <input type="date" id="filtro-fim" title="Fim">
       </div>
       <div class="filtro-grupo">
-        <label>Sequência (ID):</label>
-        <input type="number" id="filtro-seq-ini" placeholder="De"> a <input type="number" id="filtro-seq-fim" placeholder="Até">
-      </div>
-      <div class="filtro-grupo">
         <label>Status Presença:</label>
         <select id="filtro-presenca">
           <option value="todos">Todos</option>
@@ -117,12 +113,14 @@
             <th>Ações</th>
           </tr>
         </thead>
-        <tbody id="inscricoes-body"></tbody>
+        <tbody id="inscricoes-body">
+          <tr><td colspan="12" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/admin.js"></script>
+  <script src="/admin.js?v=3"></script>
 </body>
 </html>
