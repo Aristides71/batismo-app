@@ -152,8 +152,8 @@ const carregarInscricoes = async () => {
   return data.map(dbToFrontend)
 }
 
-app.get('/api/inscricoes', requireAuthApi, async (req, res) => {
-  console.log('API Inscricoes chamada por:', req.session.email)
+app.get('/api/inscricoes', async (req, res) => {
+  console.log('API Inscricoes chamada')
   try {
     const lista = await carregarInscricoes()
     console.log('Inscricoes carregadas:', lista.length)
