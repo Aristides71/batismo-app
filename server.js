@@ -10,6 +10,21 @@ const app = express()
 const server = http.createServer(app)
 const io = new Server(server)
 
+// Helper para data correta no Brasil (YYYY-MM-DD)
+const getBrazilDateISO = () => {
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date())
+  const y = parts.find(p => p.type === 'year').value
+  const m = parts.find(p => p.type === 'month').value
+  const d = parts.find(p => p.type === 'day').value
+  return `${y}-${m}-${d}`
+}
+
+// Health Check para Render
+app.get('/health', (req, res) => res.status(200).send('OK'))
+
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -19,11 +34,17 @@ const MAIN_ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || '').trim()
 
 app.use(express.json())
 app.use(session({
-  secret: 'segredo-paroquia-trindade',
+  secret: process.env.SESSION_SECRET || 'segredo-paroquia-trindade',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 3600000 } // 1 hora
+  cookie: { 
+    maxAge: 3600000, // 1 hora
+    secure: process.env.NODE_ENV === 'production' // Apenas HTTPS em produção
+  } 
 }))
+
+// Trust Proxy para Render/Heroku (necessário para cookies secure funcionarem atrás de proxy)
+app.set('trust proxy', 1)
 
 const requireAuth = (req, res, next) => {
   if (req.session && req.session.authenticated) {
@@ -172,7 +193,7 @@ io.on('connection', async socket => {
 
 app.get('/api/datas-reuniao', async (req, res) => {
   try {
-    const hoje = new Date().toISOString().split('T')[0]
+    const hoje = getBrazilDateISO()
     const { data, error } = await supabase
       .from('meeting_dates')
       .select('meeting_date, meeting_time')
@@ -264,7 +285,7 @@ app.post('/api/inscricoes', async (req, res) => {
     godfather_name: padrinhoNome,
     godmother_name: madrinhaNome,
     contact_phone: paiCelular || maeCelular,
-    meeting_date: dataReuniao || new Date().toISOString().split('T')[0],
+    meeting_date: dataReuniao || getBrazilDateISO(),
     confirmed_father: false,
     confirmed_mother: false,
     confirmed_godfather: false,
