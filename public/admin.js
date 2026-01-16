@@ -127,6 +127,7 @@ async function carregarUsuarioAtual() {
 }
 const areaFiltros = document.getElementById('area-filtros')
 const btnLimparFiltros = document.getElementById('btn-limpar-filtros')
+const btnOrdenar = document.getElementById('btn-ordenar')
 
 // Filtros Avançados
 const filtroDataInscricao = document.getElementById('filtro-data-inscricao')
@@ -139,6 +140,7 @@ let inscricoes = []
 let dailyChart = null
 let monthlyChart = null
 let adminEmails = []
+let sortAscending = false // Padrão: mais recentes primeiro (false = desc)
 
 function updateCharts() {
   const now = new Date()
@@ -315,10 +317,13 @@ function passaFiltro(i, f) {
 
 function getFilteredData() {
   const f = getFilterState()
-  return inscricoes
+  const sorted = inscricoes
     .slice()
-    .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm))
-    .filter(i => passaFiltro(i, f))
+    .sort((a, b) => {
+      const diff = new Date(a.criadoEm) - new Date(b.criadoEm)
+      return sortAscending ? diff : -diff
+    })
+  return sorted.filter(i => passaFiltro(i, f))
 }
 
 function render() {
@@ -340,12 +345,12 @@ function render() {
     </div>
   `
 
-  const rows = dados.map(i => `
+  const rows = dados.map((i, index) => `
     <tr>
       <td style="text-align: center;">
         <input type="checkbox" class="row-select" value="${i.id}">
       </td>
-      <td data-label="ID">#${i.id}</td>
+      <td data-label="ID">${index + 1}</td>
       <td data-label="Data Inscr.">${formatDate(i.criadoEm)}</td>
       <td data-label="Data Reunião">${formatDateShort(i.dataReuniao)}</td>
       <td data-label="Batizando">${i.batizando.nome}</td>
@@ -619,6 +624,16 @@ if (btnLimparFiltros) {
 
 if (btnExportar) btnExportar.addEventListener('click', exportarCSV)
 if (btnPDF) btnPDF.addEventListener('click', exportarPDF)
+
+if (btnOrdenar) {
+  btnOrdenar.addEventListener('click', () => {
+    sortAscending = !sortAscending
+    btnOrdenar.textContent = sortAscending
+      ? 'Ordenar: Mais Antigas'
+      : 'Ordenar: Recentes'
+    render()
+  })
+}
 
 async function carregarAdmins() {
   if (!adminEmailList || currentUserRole !== 'owner') return
