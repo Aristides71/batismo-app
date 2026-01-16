@@ -747,10 +747,16 @@ input:checked + .slider:before {
   /* Admin Dashboard */
   .dashboard-container {
     flex-direction: column;
+    gap: 15px;
   }
 
   .chart-card {
     min-width: 100%;
+    padding: 15px; /* Reduz padding para ganhar largura */
+  }
+
+  .chart-wrapper {
+    height: 250px; /* Aumenta altura em mobile para melhor proporção */
   }
 
   .toolbar {
