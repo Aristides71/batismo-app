@@ -403,6 +403,7 @@ table tr:hover {
   background: #edf2f7;
   color: var(--text-secondary);
   box-shadow: none;
+  border-radius: 30px;
 }
 
 .toolbar button:hover {
@@ -554,6 +555,7 @@ input:checked + .slider:before {
   flex: 1;
   padding: 10px;
   font-size: 0.9rem;
+  border-radius: 30px;
 }
 
 .lista-simples {
@@ -579,7 +581,7 @@ input:checked + .slider:before {
   color: #c53030;
   border: none;
   padding: 5px 10px;
-  border-radius: 4px;
+  border-radius: 20px;
   font-size: 0.8rem;
   width: auto;
   margin-left: 10px;
