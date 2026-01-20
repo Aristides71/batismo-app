@@ -526,6 +526,22 @@ async function getLogoBase64() {
   }
 }
 
+async function getSignatureBase64() {
+  try {
+    const response = await fetch('/1.png')
+    if (!response.ok) throw new Error('Imagem de assinatura não encontrada')
+    const blob = await response.blob()
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.readAsDataURL(blob)
+    })
+  } catch (e) {
+    console.warn('Erro ao carregar assinatura para PDF', e)
+    return null
+  }
+}
+
 async function exportarPDF() {
   if (!window.jspdf) {
     alert('Erro: Biblioteca PDF não carregada. Recarregue a página.')
@@ -924,6 +940,19 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.text('Pároco', leftX, sigY + 6, { align: 'center' })
 
         // Assinatura Coordenador (Direita)
+        if (signatureData) {
+          try {
+            const sigProps = doc.getImageProperties(signatureData)
+            const sigWidth = 35 // Largura em mm
+            const sigHeight = (sigProps.height * sigWidth) / sigProps.width
+            // Centralizado em rightX, base da imagem um pouco acima da linha (sigY)
+            const sigX = rightX - (sigWidth / 2)
+            const sigYImg = sigY - sigHeight - 2
+            doc.addImage(signatureData, 'PNG', sigX, sigYImg, sigWidth, sigHeight)
+          } catch (e) {
+            console.warn('Erro ao desenhar assinatura:', e)
+          }
+        }
         doc.line(rightX - 40, sigY, rightX + 40, sigY)
         doc.text('Coordenador(a) da Pastoral', rightX, sigY + 6, { align: 'center' })
       } catch (pageErr) {
