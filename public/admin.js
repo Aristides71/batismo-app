@@ -898,15 +898,19 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.setFont('times', 'normal')
         doc.setFontSize(16)
         // Texto com vínculo explícito da data
-        doc.text(`participou do Encontro de Preparação para o Batismo`, width / 2, yPos, { align: 'center' })
+        doc.text(`participou do curso de preparação de Pais e Padrinhos para o Batismo,`, width / 2, yPos, { align: 'center' })
         yPos += 8
         doc.text(`realizado em ${pessoa.data}`, width / 2, yPos, { align: 'center' })
         
         yPos += 12
         doc.text(`referente ao batismo do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
 
+        yPos += 10
+        doc.setFontSize(14)
+        doc.text('Validade: 01 ano', width / 2, yPos, { align: 'center' })
+
         // --- Assinaturas ---
-        const sigY = height - 40
+        const sigY = height - 35 // Baixado para evitar sobreposição
         const leftX = width / 4 + 10
         const rightX = (width / 4) * 3 - 10
 
