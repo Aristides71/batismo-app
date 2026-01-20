@@ -956,7 +956,7 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
             // Centralizado em rightX, base da imagem um pouco acima da linha (sigY)
             const sigX = rightX - (sigWidth / 2)
             const sigYImg = sigY - sigHeight - 2
-            doc.addImage(signatureData, 'PNG', sigX, sigYImg, sigWidth, sigHeight)
+            doc.addImage(signatureData, 'JPEG', sigX, sigYImg, sigWidth, sigHeight)
           } catch (e) {
             console.warn('Erro ao desenhar assinatura:', e)
           }
