@@ -894,10 +894,30 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
     doc.text('Coordenador(a) da Pastoral', rightX, sigY + 6, { align: 'center' })
   })
 
-  // Salvar/Abrir
-  const blob = doc.output('blob')
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
+  // Tentar abrir em nova aba (visualização)
+  try {
+    const pdfBlob = doc.output('blob')
+    const pdfUrl = URL.createObjectURL(pdfBlob)
+    
+    // Tenta abrir a janela
+    const newWindow = window.open(pdfUrl, '_blank')
+    
+    // Verifica se foi bloqueado
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      console.warn('Pop-up bloqueado. Tentando download direto.')
+      alert('A visualização automática foi bloqueada pelo navegador. O download do certificado iniciará automaticamente.')
+      doc.save('certificados-batismo.pdf')
+    }
+  } catch (e) {
+    console.error('Erro ao abrir PDF:', e)
+    alert('Erro ao visualizar PDF. Tentando download...')
+    try {
+      doc.save('certificados-batismo.pdf')
+    } catch (err) {
+      alert('Falha crítica ao gerar PDF. Consulte o console.')
+      console.error(err)
+    }
+  }
 }
 
 function getDadosPessoa(id, role) {
