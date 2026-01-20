@@ -864,26 +864,26 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.setTextColor(50, 50, 50)
         doc.text('Paróquia Santíssima Trindade', width / 2, yPos, { align: 'center' })
         
-        yPos += 16
+        yPos += 14 // Reduzido de 16
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(40)
         doc.setTextColor(115, 102, 255) // Cor primária
         doc.text('CERTIFICADO', width / 2, yPos, { align: 'center' })
 
-        yPos += 10
+        yPos += 8 // Reduzido de 10
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(14)
         doc.setTextColor(100, 100, 100)
         doc.text('DE PREPARAÇÃO PARA O BATISMO', width / 2, yPos, { align: 'center' })
 
         // --- Corpo do Texto ---
-        yPos += 25
+        yPos += 20 // Reduzido de 25
         doc.setFont('times', 'normal')
         doc.setFontSize(18)
         doc.setTextColor(0, 0, 0)
         doc.text('Certificamos que', width / 2, yPos, { align: 'center' })
 
-        yPos += 15
+        yPos += 14 // Reduzido de 15
         // Usar apenas bold se bolditalic falhar em algumas versões
         doc.setFont('times', 'bold') 
         doc.setFontSize(32)
@@ -894,7 +894,7 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.setLineWidth(0.5)
         doc.line(width / 2 - 80, yPos + 3, width / 2 + 80, yPos + 3)
 
-        yPos += 16
+        yPos += 14 // Reduzido de 16
         doc.setFont('times', 'normal')
         doc.setFontSize(16)
         // Texto com vínculo explícito da data
@@ -902,17 +902,17 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         yPos += 8
         doc.text(`realizado em ${pessoa.data}`, width / 2, yPos, { align: 'center' })
         
-        yPos += 12
+        yPos += 10 // Reduzido de 12
         doc.text(`referente ao batismo do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
 
-        yPos += 10
-         doc.setFontSize(14)
-         doc.text('Validade: 01 ano', width / 2, yPos, { align: 'center' })
- 
-         // --- Assinaturas ---
-         const sigY = height - 28 // Ajuste fino para evitar sobreposição (movido mais para baixo)
-         const leftX = width / 4 + 10
-         const rightX = (width / 4) * 3 - 10
+        yPos += 12 // Aumentado um pouco para afastar "Validade" do texto acima
+        doc.setFontSize(14)
+        doc.text('Validade: 01 ano', width / 2, yPos, { align: 'center' })
+
+        // --- Assinaturas ---
+        const sigY = height - 25 // Ajustado para height - 25 para dar mais espaço acima
+        const leftX = width / 4 + 10
+        const rightX = (width / 4) * 3 - 10
 
         doc.setLineWidth(0.5)
         doc.setDrawColor(0, 0, 0)
