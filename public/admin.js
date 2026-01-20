@@ -897,10 +897,7 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.text('CERTIFICADO', width / 2, yPos, { align: 'center' })
 
         yPos += 8 // Reduzido de 10
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(14)
-        doc.setTextColor(100, 100, 100)
-        doc.text('DE PREPARAÇÃO PARA O BATISMO', width / 2, yPos, { align: 'center' })
+
 
         // --- Corpo do Texto ---
         yPos += 20 // Reduzido de 25
