@@ -515,6 +515,7 @@ async function getLogoBase64() {
   try {
     const response = await fetch('/logo-trindade.png')
     const blob = await response.blob()
+    console.log('Assinatura carregada com sucesso')
     return new Promise((resolve) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result)
@@ -528,9 +529,10 @@ async function getLogoBase64() {
 
 async function getSignatureBase64() {
   try {
-    const response = await fetch('/1.png')
+    const response = await fetch('/1.jpg')
     if (!response.ok) throw new Error('Imagem de assinatura não encontrada')
     const blob = await response.blob()
+    console.log('Assinatura carregada com sucesso (1.jpg)')
     return new Promise((resolve) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result)
