@@ -929,7 +929,22 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.text(`realizado em ${pessoa.data}`, width / 2, yPos, { align: 'center' })
         
         yPos += 10 // Reduzido de 12
-        doc.text(`referente ao batismo do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
+        
+        const part1 = 'referente ao batismo do(a) batizando(a) '
+        const part2 = pessoa.batizando || ''
+
+        doc.setFont('times', 'normal')
+        const w1 = doc.getTextWidth(part1)
+        doc.setFont('times', 'bolditalic')
+        const w2 = doc.getTextWidth(part2)
+
+        const totalW = w1 + w2
+        const startX = (width - totalW) / 2
+
+        doc.setFont('times', 'normal')
+        doc.text(part1, startX, yPos)
+        doc.setFont('times', 'bolditalic')
+        doc.text(part2, startX + w1, yPos)
 
         yPos += 12 // Aumentado um pouco para afastar "Validade" do texto acima
         doc.setFontSize(14)
