@@ -808,14 +808,22 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
 
-    // Carregamento do logo com timeout para não travar
+    // Carregamento do logo e assinatura
     let logoData = null
+    let signatureData = null
     try {
       const logoPromise = getLogoBase64()
+      const sigPromise = getSignatureBase64()
       const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 3000)) // 3s timeout
-      logoData = await Promise.race([logoPromise, timeoutPromise])
+      
+      const [l, s] = await Promise.all([
+        Promise.race([logoPromise, timeoutPromise]),
+        Promise.race([sigPromise, timeoutPromise])
+      ])
+      logoData = l
+      signatureData = s
     } catch (err) {
-      console.warn('Logo não carregou, gerando sem logo:', err)
+      console.warn('Recursos gráficos não carregaram corretamente:', err)
     }
 
     pessoasParaCertificado.forEach((pessoa, index) => {
@@ -1088,3 +1096,6 @@ async function gerarCertificados() {
 if (btnCertificados) {
   btnCertificados.addEventListener('click', gerarCertificados)
 }
+
+// Force update check
+console.log('Admin JS Loaded - v1.1')
