@@ -818,15 +818,34 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.rect(12, 12, width - 24, height - 24)
         doc.rect(14, 14, width - 28, height - 28)
 
-        // Cantos Ornamentais
-        drawOrnamentalCorner(doc, 14, 14, 0)
-        drawOrnamentalCorner(doc, width - 14, 14, 90)
-        drawOrnamentalCorner(doc, width - 14, height - 14, 180)
-        drawOrnamentalCorner(doc, 14, height - 14, 270)
+        // Cantos Ornamentais Simplificados (Sem rotação complexa para evitar erros)
+        const cornerSize = 20
+        doc.setDrawColor(115, 102, 255)
+        doc.setLineWidth(1)
+
+        // Superior Esquerdo
+        doc.line(14, 14 + cornerSize, 14, 14)
+        doc.line(14, 14, 14 + cornerSize, 14)
+        doc.circle(14 + 5, 14 + 5, 2)
+
+        // Superior Direito
+        doc.line(width - 14 - cornerSize, 14, width - 14, 14)
+        doc.line(width - 14, 14, width - 14, 14 + cornerSize)
+        doc.circle(width - 14 - 5, 14 + 5, 2)
+
+        // Inferior Direito
+        doc.line(width - 14, height - 14 - cornerSize, width - 14, height - 14)
+        doc.line(width - 14, height - 14, width - 14 - cornerSize, height - 14)
+        doc.circle(width - 14 - 5, height - 14 - 5, 2)
+
+        // Inferior Esquerdo
+        doc.line(14 + cornerSize, height - 14, 14, height - 14)
+        doc.line(14, height - 14, 14, height - 14 - cornerSize)
+        doc.circle(14 + 5, height - 14 - 5, 2)
 
         // --- Logo ---
         let yPos = 35
-        if (logoData) {
+        if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
           try {
             const imgProps = doc.getImageProperties(logoData)
             const imgWidth = 25
@@ -865,7 +884,8 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.text('Certificamos que', width / 2, yPos, { align: 'center' })
 
         yPos += 15
-        doc.setFont('times', 'bolditalic')
+        // Usar apenas bold se bolditalic falhar em algumas versões
+        doc.setFont('times', 'bold') 
         doc.setFontSize(32)
         doc.text(pessoa.nome, width / 2, yPos, { align: 'center' })
         
@@ -904,7 +924,7 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
         doc.text('Coordenador(a) da Pastoral', rightX, sigY + 6, { align: 'center' })
       } catch (pageErr) {
         console.error('Erro ao gerar página do certificado:', pageErr)
-        alert('Erro ao gerar uma das páginas do certificado. O arquivo pode estar incompleto.')
+        alert(`Erro ao gerar página do certificado para ${pessoa.nome}. Detalhes: ${pageErr.message}`)
       }
     })
 
