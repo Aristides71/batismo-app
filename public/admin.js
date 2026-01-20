@@ -933,6 +933,7 @@ async function gerarPDFCertificados(pessoasParaCertificado) {
 
         yPos += 12 // Aumentado um pouco para afastar "Validade" do texto acima
         doc.setFontSize(14)
+        doc.setFont('times', 'italic')
         doc.text('Validade: 01 ano', width / 2, yPos, { align: 'center' })
 
         // --- Assinaturas ---
