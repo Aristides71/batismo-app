@@ -348,7 +348,10 @@ function render() {
   
   const createNameCell = (person, role, id) => `
     <div class="nome-com-presenca">
-      <span>${person.nome}</span>
+      <div class="nome-actions">
+        <span>${person.nome}</span>
+        ${person.presente ? `<button class="btn-cert-mini" data-id="${id}" data-role="${role}" title="Gerar Certificado Individual">📜</button>` : ''}
+      </div>
       <label class="switch" title="Confirmar Presença">
         <input type="checkbox" 
                class="presenca-check" 
@@ -414,6 +417,16 @@ function render() {
         console.error('Erro ao atualizar presença', err)
         e.target.checked = !presente // Reverte em caso de erro
       }
+    })
+  })
+
+  // Listeners for Individual Certificates
+  document.querySelectorAll('.btn-cert-mini').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const id = e.target.dataset.id
+      const role = e.target.dataset.role
+      gerarCertificadoIndividual(id, role)
     })
   })
 }
@@ -736,6 +749,211 @@ carregarInscricoesHTTP()
 
 const btnCertificados = document.getElementById('btn-certificados')
 
+// Função helper para desenhar cantos ornamentais
+function drawOrnamentalCorner(doc, x, y, angle) {
+  doc.saveGraphicsState()
+  doc.translate(x, y)
+  doc.rotate(angle)
+  doc.setLineWidth(0.5)
+  doc.setDrawColor(115, 102, 255) // Roxo principal
+  
+  // Desenhar um padrão de "folhas" ou curvas simples
+  const scale = 0.8
+  
+  // Linha principal do canto
+  doc.lines([[25 * scale, 0], [0, 25 * scale]], 0, 0, [1, 1]) // Escala simples não funciona bem em lines, fazendo manual
+  
+  // Curvas decorativas (Bézier cúbico simulado)
+  // Partindo de (0,0)
+  doc.setLineWidth(1)
+  doc.lines([[30, 0]], 0, 0) // Linha horiz
+  doc.lines([[0, 30]], 0, 0) // Linha vert
+  
+  // Detalhe interno
+  doc.setLineWidth(0.5)
+  doc.setDrawColor(240, 100, 150) // Rosa
+  doc.lines([[20, 5], [5, 20]], 5, 5)
+  
+  // Círculo decorativo no vértice
+  doc.circle(5, 5, 2, 'S')
+  
+  doc.restoreGraphicsState()
+}
+
+async function gerarPDFCertificados(pessoasParaCertificado) {
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF('l', 'mm', 'a4') // Landscape
+  const width = doc.internal.pageSize.getWidth()
+  const height = doc.internal.pageSize.getHeight()
+
+  const logoData = await getLogoBase64()
+
+  pessoasParaCertificado.forEach((pessoa, index) => {
+    if (index > 0) doc.addPage()
+
+    // --- Bordas e Cantos Decorativos ---
+    // Borda Externa Simples
+    doc.setDrawColor(115, 102, 255) // Roxo
+    doc.setLineWidth(1)
+    doc.rect(8, 8, width - 16, height - 16)
+    
+    // Borda Interna Dupla
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(0.5)
+    doc.rect(12, 12, width - 24, height - 24)
+    doc.rect(14, 14, width - 28, height - 28)
+
+    // Cantos Ornamentais (Simulados)
+    // Superior Esquerdo
+    drawOrnamentalCorner(doc, 14, 14, 0)
+    // Superior Direito
+    drawOrnamentalCorner(doc, width - 14, 14, 90)
+    // Inferior Direito
+    drawOrnamentalCorner(doc, width - 14, height - 14, 180)
+    // Inferior Esquerdo
+    drawOrnamentalCorner(doc, 14, height - 14, 270)
+
+    // --- Logo ---
+    let yPos = 35
+    if (logoData) {
+      try {
+        const imgProps = doc.getImageProperties(logoData)
+        const imgWidth = 25
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width
+        const xPos = (width - imgWidth) / 2
+        doc.addImage(logoData, 'PNG', xPos, 18, imgWidth, imgHeight)
+        yPos = 18 + imgHeight + 8
+      } catch (e) {
+        console.warn('Erro ao adicionar logo', e)
+      }
+    }
+
+    // --- Títulos ---
+    doc.setFont('times', 'bold')
+    doc.setFontSize(24)
+    doc.setTextColor(50, 50, 50)
+    doc.text('Paróquia Santíssima Trindade', width / 2, yPos, { align: 'center' })
+    
+    yPos += 16
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(40)
+    doc.setTextColor(115, 102, 255) // Cor primária
+    doc.text('CERTIFICADO', width / 2, yPos, { align: 'center' })
+
+    yPos += 10
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(14)
+    doc.setTextColor(100, 100, 100)
+    doc.text('DE PREPARAÇÃO PARA O BATISMO', width / 2, yPos, { align: 'center' })
+
+    // --- Corpo do Texto ---
+    yPos += 25
+    doc.setFont('times', 'normal')
+    doc.setFontSize(18)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Certificamos que', width / 2, yPos, { align: 'center' })
+
+    yPos += 15
+    doc.setFont('times', 'bolditalic')
+    doc.setFontSize(32)
+    doc.text(pessoa.nome, width / 2, yPos, { align: 'center' })
+    
+    // Linha decorativa abaixo do nome
+    doc.setDrawColor(150, 150, 150)
+    doc.setLineWidth(0.5)
+    doc.line(width / 2 - 80, yPos + 3, width / 2 + 80, yPos + 3)
+
+    yPos += 16
+    doc.setFont('times', 'normal')
+    doc.setFontSize(16)
+    // Texto com vínculo explícito da data
+    doc.text(`participou do Encontro de Preparação para o Batismo`, width / 2, yPos, { align: 'center' })
+    yPos += 8
+    doc.text(`realizado em ${pessoa.data}`, width / 2, yPos, { align: 'center' })
+    
+    yPos += 12
+    doc.text(`referente ao batismo do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
+
+    // --- Assinaturas ---
+    // Posicionar assinaturas mais abaixo
+    const sigY = height - 40
+    const leftX = width / 4 + 10
+    const rightX = (width / 4) * 3 - 10
+
+    doc.setLineWidth(0.5)
+    doc.setDrawColor(0, 0, 0)
+    doc.setFontSize(12)
+    doc.setFont('times', 'normal')
+
+    // Assinatura Pároco (Esquerda)
+    doc.line(leftX - 40, sigY, leftX + 40, sigY)
+    doc.text('Pároco', leftX, sigY + 6, { align: 'center' })
+
+    // Assinatura Coordenador (Direita)
+    doc.line(rightX - 40, sigY, rightX + 40, sigY)
+    doc.text('Coordenador(a) da Pastoral', rightX, sigY + 6, { align: 'center' })
+  })
+
+  // Salvar/Abrir
+  const blob = doc.output('blob')
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+}
+
+function getDadosPessoa(id, role) {
+  const inscricao = inscricoes.find(i => i.id === id)
+  if (!inscricao) return null
+
+  let pessoa = null
+  let papelStr = ''
+
+  if (role === 'pai') { pessoa = inscricao.pai; papelStr = 'Pai' }
+  else if (role === 'mae') { pessoa = inscricao.mae; papelStr = 'Mãe' }
+  else if (role === 'padrinho') { pessoa = inscricao.padrinho; papelStr = 'Padrinho' }
+  else if (role === 'madrinha') { pessoa = inscricao.madrinha; papelStr = 'Madrinha' }
+
+  if (!pessoa) return null
+
+  // Formata a data da reunião ou usa a data atual se não houver
+  let dataReuniaoStr = 'Data não informada'
+  if (inscricao.dataReuniao) {
+    dataReuniaoStr = formatDateShort(inscricao.dataReuniao)
+  } else {
+     dataReuniaoStr = new Date().toLocaleDateString('pt-BR')
+  }
+
+  const batizando = inscricao.batizando.nome || 'Batizando'
+
+  return {
+    nome: pessoa.nome,
+    papel: papelStr,
+    batizando: batizando,
+    data: dataReuniaoStr,
+    presente: pessoa.presente
+  }
+}
+
+async function gerarCertificadoIndividual(id, role) {
+  if (!window.jspdf) {
+    alert('Erro: Biblioteca PDF não carregada. Tente recarregar a página.')
+    return
+  }
+
+  const dados = getDadosPessoa(id, role)
+  if (!dados) {
+    alert('Dados não encontrados.')
+    return
+  }
+  
+  if (!dados.presente) {
+    if(!confirm(`A presença de ${dados.nome} não está confirmada ("Não"). Deseja gerar o certificado mesmo assim?`)) {
+      return
+    }
+  }
+
+  await gerarPDFCertificados([dados])
+}
+
 async function gerarCertificados() {
   if (!window.jspdf) {
     alert('Erro: Biblioteca PDF não carregada. Tente recarregar a página.')
@@ -794,99 +1012,7 @@ async function gerarCertificados() {
 
   if (!confirm(`Serão gerados ${pessoasParaCertificado.length} certificados. Deseja continuar?`)) return
 
-  const { jsPDF } = window.jspdf
-  const doc = new jsPDF('l', 'mm', 'a4') // Landscape
-  const width = doc.internal.pageSize.getWidth()
-  const height = doc.internal.pageSize.getHeight()
-
-  const logoData = await getLogoBase64()
-
-  pessoasParaCertificado.forEach((pessoa, index) => {
-    if (index > 0) doc.addPage()
-
-    // Fundo / Borda
-    doc.setDrawColor(115, 102, 255) // Roxo principal
-    doc.setLineWidth(3)
-    doc.rect(10, 10, width - 20, height - 20)
-    
-    doc.setDrawColor(240, 100, 150) // Rosa secundário
-    doc.setLineWidth(1)
-    doc.rect(14, 14, width - 28, height - 28)
-
-    // Logo
-    let yPos = 40
-    if (logoData) {
-      try {
-        const imgProps = doc.getImageProperties(logoData)
-        const imgWidth = 30
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width
-        const xPos = (width - imgWidth) / 2
-        doc.addImage(logoData, 'PNG', xPos, 20, imgWidth, imgHeight)
-        yPos = 20 + imgHeight + 10
-      } catch (e) {
-        console.warn('Erro ao adicionar logo', e)
-      }
-    }
-
-    // Títulos
-    doc.setFont('times', 'bold')
-    doc.setFontSize(22)
-    doc.setTextColor(60, 60, 60)
-    doc.text('Paróquia Santíssima Trindade', width / 2, yPos, { align: 'center' })
-    
-    yPos += 18
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(36)
-    doc.setTextColor(115, 102, 255) // Cor primária
-    doc.text('CERTIFICADO', width / 2, yPos, { align: 'center' })
-
-    yPos += 10
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(14)
-    doc.setTextColor(100, 100, 100)
-    doc.text('DE PREPARAÇÃO PARA O BATISMO', width / 2, yPos, { align: 'center' })
-
-    // Corpo do texto
-    yPos += 30
-    doc.setFont('times', 'normal')
-    doc.setFontSize(18)
-    doc.setTextColor(0, 0, 0)
-    doc.text('Certificamos que', width / 2, yPos, { align: 'center' })
-
-    yPos += 15
-    doc.setFont('times', 'bolditalic')
-    doc.setFontSize(30)
-    doc.text(pessoa.nome, width / 2, yPos, { align: 'center' })
-    
-    // Linha decorativa abaixo do nome
-    doc.setDrawColor(100, 100, 100)
-    doc.setLineWidth(0.5)
-    doc.line(width / 2 - 90, yPos + 3, width / 2 + 90, yPos + 3)
-
-    yPos += 18
-    doc.setFont('times', 'normal')
-    doc.setFontSize(16)
-    doc.text(`participou do Encontro de Preparação para o Batismo`, width / 2, yPos, { align: 'center' })
-    
-    yPos += 8
-    doc.text(`do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
-
-    // Data e Assinatura
-    yPos += 35
-    doc.setFontSize(14)
-    doc.text(`Data do Encontro: ${pessoa.data}`, width / 2, yPos, { align: 'center' })
-
-    yPos += 25
-    doc.line(width / 2 - 50, yPos, width / 2 + 50, yPos)
-    yPos += 6
-    doc.setFontSize(12)
-    doc.text('Pastoral do Batismo', width / 2, yPos, { align: 'center' })
-  })
-
-  // Salvar/Abrir
-  const blob = doc.output('blob')
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
+  await gerarPDFCertificados(pessoasParaCertificado)
 }
 
 if (btnCertificados) {

@@ -454,6 +454,31 @@ table tr:hover {
   gap: 10px;
 }
 
+.nome-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-cert-mini {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px;
+  border-radius: 4px;
+  transition: transform 0.2s, background-color 0.2s;
+  color: #5a67d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-cert-mini:hover {
+  transform: scale(1.2);
+  background-color: rgba(90, 103, 216, 0.1);
+}
+
 /* Switch Button for Presence */
 .switch {
   position: relative;
