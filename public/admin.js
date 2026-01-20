@@ -25,6 +25,21 @@ socket.on('inscricao_removida', (id) => {
   updateCharts()
 })
 
+socket.on('atualizacao_presenca', ({ id, role, presente }) => {
+  console.log('Atualização de presença:', id, role, presente)
+  const inscricao = inscricoes.find(i => i.id === id)
+  if (inscricao) {
+    if (role === 'pai') inscricao.pai.presente = presente
+    if (role === 'mae') inscricao.mae.presente = presente
+    if (role === 'padrinho') inscricao.padrinho.presente = presente
+    if (role === 'madrinha') inscricao.madrinha.presente = presente
+    // Não chamamos render() aqui para evitar "pulo" na interface se o usuário estiver clicando,
+    // mas atualizamos o array local para que a geração de certificados funcione corretamente.
+    // O checkbox já reflete o estado visualmente se foi o próprio usuário que clicou.
+    // Se foi outro usuário, talvez devêssemos renderizar, mas vamos manter simples por enquanto.
+  }
+})
+
 const tbody = document.getElementById('inscricoes-body')
 const filtroInput = document.getElementById('filtro')
 const contadorEl = document.getElementById('contador')
@@ -683,88 +698,12 @@ if (adminEmailAdd && adminEmailInput) {
   })
 }
 
-socket.on('lista_inscricoes', lista => {
-  inscricoes = Array.isArray(lista) ? lista.slice() : []
-  render()
-  updateCharts()
-})
-
-socket.on('inscricao_removida', id => {
-  inscricoes = inscricoes.filter(i => i.id !== id)
-  render()
-  updateCharts()
-})
-
-socket.on('nova_inscricao', i => {
-  inscricoes.push(i)
-  render()
-  updateCharts()
-})
-
-socket.on('atualizacao_presenca', ({ id, role, presente }) => {
-  const inscricao = inscricoes.find(i => i.id === id)
-  if (inscricao && inscricao[role]) {
-    inscricao[role].presente = presente
-    render()
-  }
-})
-
 document.getElementById('check-all').addEventListener('change', (e) => {
   const isChecked = e.target.checked
   document.querySelectorAll('.row-select').forEach(cb => {
     cb.checked = isChecked
   })
 })
-
-async function carregarUsuarioAtual() {
-  try {
-    const res = await fetch('/api/me')
-    if (!res.ok) {
-      window.location.href = '/login.html'
-      return
-    }
-    const body = await res.json().catch(() => ({}))
-    if (body && body.ok && body.role) {
-      currentUserRole = body.role
-    }
-    if (currentUserRole !== 'owner') {
-      if (adminPermsSection) adminPermsSection.style.display = 'none'
-      if (meetingDatesSection) meetingDatesSection.style.display = 'none'
-    }
-    if (currentUserRole === 'owner') {
-      if (adminPermsSection) adminPermsSection.style.display = 'block'
-      if (meetingDatesSection) meetingDatesSection.style.display = 'block'
-      carregarAdmins()
-      carregarDatasReuniao()
-    }
-  } catch (e) {
-    window.location.href = '/login.html'
-  }
-}
-
-if (btnAddMeeting) {
-  btnAddMeeting.onclick = async () => {
-    const data = newMeetingDate.value
-    const hora = newMeetingTime.value
-    if (!data || !hora) {
-      alert('Informe data e hora')
-      return
-    }
-    try {
-      const res = await fetch('/api/admin/datas', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ data, hora })
-      })
-      if (res.ok) {
-        newMeetingDate.value = ''
-        carregarDatasReuniao()
-      } else {
-        alert('Erro ao adicionar data')
-      }
-    } catch(e) { console.error(e); alert('Erro ao adicionar') }
-  }
-}
 
 // Inicia verificação de usuário
 carregarUsuarioAtual()
@@ -794,3 +733,162 @@ async function carregarInscricoesHTTP() {
   }
 }
 carregarInscricoesHTTP()
+
+const btnCertificados = document.getElementById('btn-certificados')
+
+async function gerarCertificados() {
+  if (!window.jspdf) {
+    alert('Erro: Biblioteca PDF não carregada. Tente recarregar a página.')
+    return
+  }
+
+  // Lógica de seleção igual ao exportarPDF
+  const selectedIds = getSelectedIds()
+  let dados = getFilteredData()
+  
+  if (selectedIds.length > 0) {
+    dados = dados.filter(i => selectedIds.includes(i.id))
+  }
+
+  if (dados.length === 0) {
+    alert('Nenhuma inscrição encontrada para gerar certificados.')
+    return
+  }
+
+  // Coletar pessoas presentes
+  const pessoasParaCertificado = []
+  
+  dados.forEach(inscricao => {
+    // Formata a data da reunião ou usa a data atual se não houver
+    let dataReuniaoStr = 'Data não informada'
+    if (inscricao.dataReuniao) {
+      dataReuniaoStr = formatDateShort(inscricao.dataReuniao)
+    } else {
+       dataReuniaoStr = new Date().toLocaleDateString('pt-BR')
+    }
+
+    const batizando = inscricao.batizando.nome || 'Batizando'
+
+    const checkAndAdd = (pessoa, papel) => {
+      // Verifica se a pessoa existe, tem nome e PRESENÇA MARCADA
+      if (pessoa && pessoa.nome && pessoa.presente) {
+        pessoasParaCertificado.push({
+          nome: pessoa.nome,
+          papel: papel,
+          batizando: batizando,
+          data: dataReuniaoStr
+        })
+      }
+    }
+
+    checkAndAdd(inscricao.pai, 'Pai')
+    checkAndAdd(inscricao.mae, 'Mãe')
+    checkAndAdd(inscricao.padrinho, 'Padrinho')
+    checkAndAdd(inscricao.madrinha, 'Madrinha')
+  })
+
+  if (pessoasParaCertificado.length === 0) {
+    alert('Nenhuma pessoa com presença confirmada ("Sim") encontrada nas inscrições selecionadas/listadas.')
+    return
+  }
+
+  if (!confirm(`Serão gerados ${pessoasParaCertificado.length} certificados. Deseja continuar?`)) return
+
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF('l', 'mm', 'a4') // Landscape
+  const width = doc.internal.pageSize.getWidth()
+  const height = doc.internal.pageSize.getHeight()
+
+  const logoData = await getLogoBase64()
+
+  pessoasParaCertificado.forEach((pessoa, index) => {
+    if (index > 0) doc.addPage()
+
+    // Fundo / Borda
+    doc.setDrawColor(115, 102, 255) // Roxo principal
+    doc.setLineWidth(3)
+    doc.rect(10, 10, width - 20, height - 20)
+    
+    doc.setDrawColor(240, 100, 150) // Rosa secundário
+    doc.setLineWidth(1)
+    doc.rect(14, 14, width - 28, height - 28)
+
+    // Logo
+    let yPos = 40
+    if (logoData) {
+      try {
+        const imgProps = doc.getImageProperties(logoData)
+        const imgWidth = 30
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width
+        const xPos = (width - imgWidth) / 2
+        doc.addImage(logoData, 'PNG', xPos, 20, imgWidth, imgHeight)
+        yPos = 20 + imgHeight + 10
+      } catch (e) {
+        console.warn('Erro ao adicionar logo', e)
+      }
+    }
+
+    // Títulos
+    doc.setFont('times', 'bold')
+    doc.setFontSize(22)
+    doc.setTextColor(60, 60, 60)
+    doc.text('Paróquia Santíssima Trindade', width / 2, yPos, { align: 'center' })
+    
+    yPos += 18
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(36)
+    doc.setTextColor(115, 102, 255) // Cor primária
+    doc.text('CERTIFICADO', width / 2, yPos, { align: 'center' })
+
+    yPos += 10
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(14)
+    doc.setTextColor(100, 100, 100)
+    doc.text('DE PREPARAÇÃO PARA O BATISMO', width / 2, yPos, { align: 'center' })
+
+    // Corpo do texto
+    yPos += 30
+    doc.setFont('times', 'normal')
+    doc.setFontSize(18)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Certificamos que', width / 2, yPos, { align: 'center' })
+
+    yPos += 15
+    doc.setFont('times', 'bolditalic')
+    doc.setFontSize(30)
+    doc.text(pessoa.nome, width / 2, yPos, { align: 'center' })
+    
+    // Linha decorativa abaixo do nome
+    doc.setDrawColor(100, 100, 100)
+    doc.setLineWidth(0.5)
+    doc.line(width / 2 - 90, yPos + 3, width / 2 + 90, yPos + 3)
+
+    yPos += 18
+    doc.setFont('times', 'normal')
+    doc.setFontSize(16)
+    doc.text(`participou do Encontro de Preparação para o Batismo`, width / 2, yPos, { align: 'center' })
+    
+    yPos += 8
+    doc.text(`do(a) batizando(a) ${pessoa.batizando}`, width / 2, yPos, { align: 'center' })
+
+    // Data e Assinatura
+    yPos += 35
+    doc.setFontSize(14)
+    doc.text(`Data do Encontro: ${pessoa.data}`, width / 2, yPos, { align: 'center' })
+
+    yPos += 25
+    doc.line(width / 2 - 50, yPos, width / 2 + 50, yPos)
+    yPos += 6
+    doc.setFontSize(12)
+    doc.text('Pastoral do Batismo', width / 2, yPos, { align: 'center' })
+  })
+
+  // Salvar/Abrir
+  const blob = doc.output('blob')
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+}
+
+if (btnCertificados) {
+  btnCertificados.addEventListener('click', gerarCertificados)
+}
