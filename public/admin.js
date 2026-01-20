@@ -639,9 +639,8 @@ async function exportarPDF() {
     }
   })
 
-  const blob = doc.output('blob')
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
+  // Salvar diretamente para garantir download
+  doc.save('lista-inscricoes.pdf')
 }
 
 if (btnFiltros && areaFiltros) {
